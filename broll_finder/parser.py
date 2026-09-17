@@ -30,8 +30,14 @@ def slugify(text: str) -> str:
     return slug or "keyword"
 
 
+_TRAILING_NOTE_RE = re.compile(r"\s*\([^()]*\)\s*$")
+
+
 def _clean_keyword(raw: str) -> str:
-    return raw.strip().strip(_QUOTE_CHARS).strip()
+    # Drop trailing annotations like "(dự phòng)" or "(motion graphic)" before
+    # stripping quotes, since they're notes for the human, not search terms.
+    without_note = _TRAILING_NOTE_RE.sub("", raw.strip())
+    return without_note.strip().strip(_QUOTE_CHARS).strip()
 
 
 def _split_keywords(cell: str) -> list[str]:

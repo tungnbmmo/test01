@@ -60,6 +60,20 @@ def test_parse_json():
     assert blocks[0].media_hint == {"video"}
 
 
+def test_parse_strips_trailing_annotation():
+    table = """
+| Khối | Nội dung khối | Từ khóa VN | Loại tư liệu gợi ý |
+|------|-----------------|------------|-----------------------|
+| 2 | Bối cảnh | "phường Sông Cầu Đắk Lắk", "tủ kính trưng bày vàng", "chủ tiệm vàng tiếp khách" (dự phòng) | ảnh tư liệu báo chí |
+"""
+    blocks = parse_input(table)
+    assert blocks[0].keywords == [
+        "phường Sông Cầu Đắk Lắk",
+        "tủ kính trưng bày vàng",
+        "chủ tiệm vàng tiếp khách",
+    ]
+
+
 def test_slugify():
     assert slugify("họp báo doanh nhân") == "hop_bao_doanh_nhan"
     assert slugify("") == "keyword"
@@ -70,5 +84,6 @@ if __name__ == "__main__":
     test_parse_headings()
     test_parse_flat_list()
     test_parse_json()
+    test_parse_strips_trailing_annotation()
     test_slugify()
     print("OK")
