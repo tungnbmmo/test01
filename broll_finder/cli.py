@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 from .downloader import append_credit, download_media
+from .google_links import build_google_images_url, write_google_links_file
 from .models import MediaResult
 from .parser import parse_input, slugify
 from .providers import PexelsProvider, PixabayProvider
@@ -47,6 +48,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-keywords-per-block", type=int, default=0, help="0 = không giới hạn.")
     p.add_argument("--sleep", type=float, default=0.4, help="Giây nghỉ giữa các lượt gọi API (tránh rate limit).")
     p.add_argument("--dry-run", action="store_true", help="Chỉ tìm kiếm và ghi manifest, không tải file.")
+    p.add_argument(
+        "--no-google-links",
+        action="store_true",
+        help="Không tạo file google_links.md (link Google Hình ảnh cho từng từ khóa, để tự kiểm tra bản quyền).",
+    )
     p.add_argument("-v", "--verbose", action="store_true")
     return p
 
@@ -111,20 +117,26 @@ def run(argv: list[str] | None = None) -> int:
         )
         return 1
 
+    if args.max_keywords_per_block:
+        for block in blocks:
+            block.keywords = block.keywords[: args.max_keywords_per_block]
+
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest: list[dict] = []
 
-    total_keywords = sum(
-        len(b.keywords[: args.max_keywords_per_block] if args.max_keywords_per_block else b.keywords)
-        for b in blocks
-    )
+    total_keywords = sum(len(b.keywords) for b in blocks)
     logger.info("Đã parse %d khối, %d từ khóa. Nguồn: %s.", len(blocks), total_keywords, ", ".join(providers) or "(dry-run, không có provider)")
+
+    if not args.no_google_links:
+        google_links_path = output_dir / "google_links.md"
+        write_google_links_file(blocks, google_links_path)
+        logger.info("Đã ghi link Google Hình ảnh cho từng từ khóa: %s", google_links_path)
 
     for block in blocks:
         block_slug = f"block_{block.index:02d}_{slugify(block.title)}"[:80]
         block_dir = output_dir / block_slug
-        keywords = block.keywords[: args.max_keywords_per_block] if args.max_keywords_per_block else block.keywords
+        keywords = block.keywords
 
         if args.media_type:
             media_types = {"video", "photo"} if args.media_type == "both" else {args.media_type}
@@ -135,16 +147,34 @@ def run(argv: list[str] | None = None) -> int:
             keyword_slug = slugify(keyword)
             logger.info("[Khối %d] Tìm '%s' (%s)...", block.index, keyword, "/".join(sorted(media_types)))
 
+            google_images_url = build_google_images_url(keyword)
+
             if args.dry_run:
                 manifest.append(
-                    {"block": block.index, "title": block.title, "keyword": keyword, "media_types": sorted(media_types), "downloaded": []}
+                    {
+                        "block": block.index,
+                        "title": block.title,
+                        "keyword": keyword,
+                        "media_types": sorted(media_types),
+                        "google_images_url": google_images_url,
+                        "downloaded": [],
+                    }
                 )
                 continue
 
             hits = _search_keyword(providers, keyword, media_types, args.per_keyword, args.orientation, args.sleep)
             if not hits:
                 logger.warning("  Không tìm thấy kết quả cho '%s'.", keyword)
-                manifest.append({"block": block.index, "title": block.title, "keyword": keyword, "media_types": sorted(media_types), "downloaded": []})
+                manifest.append(
+                    {
+                        "block": block.index,
+                        "title": block.title,
+                        "keyword": keyword,
+                        "media_types": sorted(media_types),
+                        "google_images_url": google_images_url,
+                        "downloaded": [],
+                    }
+                )
                 continue
 
             keyword_dir = block_dir / keyword_slug
@@ -159,7 +189,16 @@ def run(argv: list[str] | None = None) -> int:
                     )
                     logger.info("  Đã tải: %s", path.relative_to(output_dir))
 
-            manifest.append({"block": block.index, "title": block.title, "keyword": keyword, "media_types": sorted(media_types), "downloaded": downloaded})
+            manifest.append(
+                {
+                    "block": block.index,
+                    "title": block.title,
+                    "keyword": keyword,
+                    "media_types": sorted(media_types),
+                    "google_images_url": google_images_url,
+                    "downloaded": downloaded,
+                }
+            )
 
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

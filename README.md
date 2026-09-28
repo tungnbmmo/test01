@@ -1,7 +1,9 @@
 # B-roll Finder — Tool tìm & tải B-roll tự động
 
 Nhận danh sách từ khóa B-roll (ví dụ bảng từ khóa mà skill `tinviet` xuất ra ở Bước 6),
-tự động search và tải ảnh/video liên quan từ **Pexels** và **Pixabay** (API chính thức, miễn phí).
+tự động search và tải ảnh/video liên quan từ **Pexels** và **Pixabay** (API chính thức, miễn phí),
+đồng thời tạo sẵn **link tìm Google Hình ảnh** cho từng từ khóa để tự chọn ảnh tư liệu thật (báo chí,
+sự kiện cụ thể) mà 2 kho stock trên không có.
 
 ## Cài đặt
 
@@ -67,11 +69,13 @@ python -m broll_finder.cli --input keywords.md --dry-run -v
 | `--orientation` | `landscape` | `landscape` (16:9, phù hợp YouTube), `portrait`, `square`, `any` |
 | `--max-keywords-per-block` | không giới hạn | Giới hạn số từ khóa xử lý mỗi khối (tiết kiệm quota API) |
 | `--dry-run` | tắt | Chỉ tìm + ghi manifest, không tải file |
+| `--no-google-links` | tắt (tức mặc định có tạo) | Bỏ qua việc tạo file `google_links.md` |
 
 ## Output
 
 ```
 broll_output/
+  google_links.md          # link Google Hình ảnh cho từng từ khóa — tự bấm, tự chọn, tự kiểm tra bản quyền
   block_01_hook_mo_dau/
     hop_bao_doanh_nhan/
       pexels_video_123456_1.mp4
@@ -79,8 +83,17 @@ broll_output/
     credits.txt          # ghi công tác giả/nguồn cho từng file trong khối
   block_02_boi_canh/
     ...
-  manifest.json           # toàn bộ kết quả tìm + tải, dùng để đối chiếu/dựng lại
+  manifest.json           # toàn bộ kết quả tìm + tải (kèm link Google Hình ảnh mỗi từ khóa)
 ```
+
+### Vì sao Google Hình ảnh chỉ ra link chứ không tự tải?
+
+Google không có API miễn phí chính thức để tự động tải ảnh tùy ý cho việc tái sử dụng — khác với
+Pexels/Pixabay (thư viện ảnh/video có giấy phép miễn phí rõ ràng), ảnh trên Google Hình ảnh thường
+thuộc bản quyền của website gốc (báo chí, blog...). Với các khối cần ảnh tư liệu sự kiện thật (ví
+dụ ảnh đúng địa điểm/vụ việc trong bản tin), tool tạo sẵn link tìm kiếm để bạn tự mở, tự chọn và tự
+kiểm tra quyền sử dụng từng ảnh trước khi đưa vào video — tránh rủi ro vi phạm bản quyền khi tự động
+tải hàng loạt.
 
 ## Lưu ý
 
@@ -98,4 +111,5 @@ broll_output/
 
 ```bash
 python tests/test_parser.py
+python tests/test_google_links.py
 ```
