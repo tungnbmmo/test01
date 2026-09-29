@@ -1,4 +1,4 @@
-coqui-tts>=0.24
+coqui-tts[codec]>=0.24
 torch
 numpy
 torchaudio
