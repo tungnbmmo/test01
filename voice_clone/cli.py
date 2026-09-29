@@ -51,6 +51,19 @@ def write_wav(path: Path, chunks: list[list[float]], pause_s: float) -> None:
         w.writeframes((audio * 32767).astype(np.int16).tobytes())
 
 
+def _load_audio(path, sampling_rate=22050):
+    """Thay cho TTS load_audio: đọc bằng soundfile, khỏi cần torchcodec/ffmpeg trên Windows."""
+    import librosa
+    import soundfile
+    import torch
+
+    data, sr = soundfile.read(str(path), dtype="float32", always_2d=True)
+    data = data.mean(axis=1)
+    if sr != sampling_rate:
+        data = librosa.resample(data, orig_sr=sr, target_sr=sampling_rate)
+    return torch.from_numpy(data).unsqueeze(0).clamp_(-1, 1)
+
+
 class Synth:
     """Bọc 2 cách nạp model: XTTS v2 gốc, hoặc checkpoint XTTS trên HuggingFace (vd viXTTS)."""
 
@@ -63,8 +76,10 @@ class Synth:
             return
         from huggingface_hub import snapshot_download
         from TTS.tts.configs.xtts_config import XttsConfig
+        from TTS.tts.models import xtts as xtts_module
         from TTS.tts.models.xtts import Xtts
 
+        xtts_module.load_audio = _load_audio
         d = Path(snapshot_download(repo))
         cfg = XttsConfig()
         cfg.load_json(str(d / "config.json"))
