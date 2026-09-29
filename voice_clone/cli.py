@@ -64,6 +64,15 @@ def _load_audio(path, sampling_rate=22050):
     return torch.from_numpy(data).unsqueeze(0).clamp_(-1, 1)
 
 
+def _clean_vi(text):
+    """Chuẩn hóa tối thiểu cho tiếng Việt: viết thường, bỏ ký tự lạ, gọn khoảng trắng."""
+    import re
+
+    text = text.lower().replace("\u201c", '"').replace("\u201d", '"').replace("\u2019", "'")
+    text = re.sub(r"[\[\](){}<>*_#@~^|\\/]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 class Synth:
     """Bọc 2 cách nạp model: XTTS v2 gốc, hoặc checkpoint XTTS trên HuggingFace (vd viXTTS)."""
 
@@ -87,6 +96,9 @@ class Synth:
         self.model.load_checkpoint(cfg, checkpoint_dir=str(d),
                                    vocab_path=str(d / "vocab.json"), use_deepspeed=False)
         self.model.to(device)
+        # coqui-tts chưa có bộ tiền xử lý cho 'vi' -> tự thêm.
+        tok, orig = self.model.tokenizer, self.model.tokenizer.preprocess_text
+        tok.preprocess_text = lambda txt, lang: _clean_vi(txt) if lang == "vi" else orig(txt, lang)
         self.latent, self.spk = self.model.get_conditioning_latents(audio_path=[str(ref)])
 
     def say(self, text, lang, speed, temperature):
