@@ -2,3 +2,4 @@ coqui-tts>=0.24
 torch
 numpy
 torchaudio
+transformers>=4.57,<5
