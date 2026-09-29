@@ -5,3 +5,4 @@ broll_output/
 voice_output/
 *.wav
 *.mp3
+*.chunks/

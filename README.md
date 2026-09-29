@@ -129,3 +129,7 @@ python -m voice_clone.cli --voice giong_cua_toi.wav --text-file kich_ban.txt --l
 - Văn bản dài được tự chia theo câu rồi ghép lại; chỉnh `--pause`, `--speed`, `--temperature`.
 - Có GPU (CUDA) sẽ nhanh hơn nhiều; CPU vẫn chạy được nhưng chậm.
 - Chỉ clone giọng của chính bạn hoặc giọng bạn có quyền sử dụng.
+
+## Google Colab (GPU)
+
+Mở `voice_clone/voice_clone_colab.ipynb` trên Colab, chọn Runtime T4 GPU, chạy lần lượt các ô. Chạy lại được khi bị ngắt: đoạn đã đọc xong lưu trong `voice_output/*.chunks`.

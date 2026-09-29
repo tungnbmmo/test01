@@ -110,6 +110,23 @@ class Synth:
         return out["wav"]
 
 
+def synth_cached(synth, chunk, args, voice_id, cache_dir):
+    """Đọc 1 đoạn; kết quả lưu ra đĩa để chạy lại thì bỏ qua đoạn đã xong."""
+    import hashlib
+
+    import numpy as np
+
+    key = hashlib.sha1(
+        f"{synth.repo}|{voice_id}|{args.lang}|{args.speed}|{args.temperature}|{chunk}".encode("utf-8")
+    ).hexdigest()[:16]
+    path = cache_dir / f"{key}.npy"
+    if path.exists():
+        return np.load(path)
+    wav = np.asarray(synth.say(chunk, args.lang, args.speed, args.temperature), dtype=np.float32)
+    np.save(path, wav)
+    return wav
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Clone giọng nói của bạn (XTTS v2)")
     p.add_argument("--voice", required=True, type=Path, help="File giọng mẫu (wav/mp3/m4a...), tốt nhất 10-30s sạch, không nhạc nền")
@@ -143,10 +160,14 @@ def main(argv=None) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         ref = prepare_reference(args.voice, Path(tmp))
         synth = Synth(repo, device, ref)
+        cache_dir = args.output.with_suffix(".chunks")
+        cache_dir.mkdir(exist_ok=True)
+        st = args.voice.stat()
+        voice_id = f"{args.voice.name}:{st.st_size}:{int(st.st_mtime)}"
         wavs = []
         for i, c in enumerate(chunks, 1):
-            print(f"[{i}/{len(chunks)}] {c[:60]}{'...' if len(c) > 60 else ''}")
-            wavs.append(synth.say(c, args.lang, args.speed, args.temperature))
+            print(f"[{i}/{len(chunks)}] {c[:60]}{'...' if len(c) > 60 else ''}", flush=True)
+            wavs.append(synth_cached(synth, c, args, voice_id, cache_dir))
     write_wav(args.output, wavs, args.pause)
     print(f"Xong: {args.output}")
     return 0
