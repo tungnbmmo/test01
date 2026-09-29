@@ -118,7 +118,7 @@ python tests/test_google_links.py
 
 # Voice Clone — Clone giọng của chính bạn
 
-Dùng Coqui XTTS v2 (chạy local, miễn phí, hỗ trợ tiếng Việt) để đọc văn bản bằng giọng từ file mẫu của bạn.
+Dùng Coqui XTTS v2 (chạy local, miễn phí, tiếng Việt qua checkpoint viXTTS, cộng đồng fine-tune từ XTTS v2) để đọc văn bản bằng giọng từ file mẫu của bạn.
 
 ```bash
 pip install -r voice_clone/requirements.txt   # cần ffmpeg để tiền xử lý file mẫu

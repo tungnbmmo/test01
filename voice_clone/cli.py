@@ -15,6 +15,8 @@ from pathlib import Path
 from .text import split_text
 
 MODEL = "tts_models/multilingual/multi-dataset/xtts_v2"
+# XTTS v2 gốc KHÔNG hỗ trợ tiếng Việt; bản fine-tune cộng đồng này thì có.
+VI_REPO = "capleaf/viXTTS"
 SAMPLE_RATE = 24000
 
 
@@ -49,6 +51,38 @@ def write_wav(path: Path, chunks: list[list[float]], pause_s: float) -> None:
         w.writeframes((audio * 32767).astype(np.int16).tobytes())
 
 
+class Synth:
+    """Bọc 2 cách nạp model: XTTS v2 gốc, hoặc checkpoint XTTS trên HuggingFace (vd viXTTS)."""
+
+    def __init__(self, repo, device, ref):
+        self.repo = repo
+        if repo is None:
+            from TTS.api import TTS
+            self.tts = TTS(MODEL).to(device)
+            self.ref = str(ref)
+            return
+        from huggingface_hub import snapshot_download
+        from TTS.tts.configs.xtts_config import XttsConfig
+        from TTS.tts.models.xtts import Xtts
+
+        d = Path(snapshot_download(repo))
+        cfg = XttsConfig()
+        cfg.load_json(str(d / "config.json"))
+        self.model = Xtts.init_from_config(cfg)
+        self.model.load_checkpoint(cfg, checkpoint_dir=str(d),
+                                   vocab_path=str(d / "vocab.json"), use_deepspeed=False)
+        self.model.to(device)
+        self.latent, self.spk = self.model.get_conditioning_latents(audio_path=[str(ref)])
+
+    def say(self, text, lang, speed, temperature):
+        if self.repo is None:
+            return self.tts.tts(text=text, speaker_wav=self.ref, language=lang,
+                                speed=speed, temperature=temperature)
+        out = self.model.inference(text, lang, self.latent, self.spk,
+                                   temperature=temperature, speed=speed)
+        return out["wav"]
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Clone giọng nói của bạn (XTTS v2)")
     p.add_argument("--voice", required=True, type=Path, help="File giọng mẫu (wav/mp3/m4a...), tốt nhất 10-30s sạch, không nhạc nền")
@@ -61,6 +95,7 @@ def main(argv=None) -> int:
     p.add_argument("--pause", type=float, default=0.25, help="Khoảng nghỉ giữa các đoạn (giây)")
     p.add_argument("--speed", type=float, default=1.0)
     p.add_argument("--temperature", type=float, default=0.65, help="Thấp = ổn định, cao = biểu cảm hơn")
+    p.add_argument("--repo", default=None, help=f"Repo HuggingFace của checkpoint XTTS (mặc định: {VI_REPO} khi --lang vi)")
     p.add_argument("--device", default=None, help="cuda / cpu (mặc định tự nhận)")
     args = p.parse_args(argv)
 
@@ -72,20 +107,19 @@ def main(argv=None) -> int:
         p.error("Văn bản trống")
 
     import torch
-    from TTS.api import TTS
 
+    repo = args.repo or (VI_REPO if args.lang == "vi" else None)
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Tải model XTTS v2 trên {device} (lần đầu sẽ tải ~2GB)...")
-    tts = TTS(MODEL).to(device)
+    print(f"Tải model {repo or 'XTTS v2'} trên {device} (lần đầu sẽ tải ~2GB)...")
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         ref = prepare_reference(args.voice, Path(tmp))
+        synth = Synth(repo, device, ref)
         wavs = []
         for i, c in enumerate(chunks, 1):
             print(f"[{i}/{len(chunks)}] {c[:60]}{'...' if len(c) > 60 else ''}")
-            wavs.append(tts.tts(text=c, speaker_wav=str(ref), language=args.lang,
-                                speed=args.speed, temperature=args.temperature))
+            wavs.append(synth.say(c, args.lang, args.speed, args.temperature))
     write_wav(args.output, wavs, args.pause)
     print(f"Xong: {args.output}")
     return 0
