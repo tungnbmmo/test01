@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 broll_output/
+voice_output/
+*.wav
+*.mp3

@@ -113,3 +113,19 @@ tải hàng loạt.
 python tests/test_parser.py
 python tests/test_google_links.py
 ```
+
+---
+
+# Voice Clone — Clone giọng của chính bạn
+
+Dùng Coqui XTTS v2 (chạy local, miễn phí, hỗ trợ tiếng Việt) để đọc văn bản bằng giọng từ file mẫu của bạn.
+
+```bash
+pip install -r voice_clone/requirements.txt   # cần ffmpeg để tiền xử lý file mẫu
+python -m voice_clone.cli --voice giong_cua_toi.wav --text-file kich_ban.txt --lang vi -o voice_output/out.wav
+```
+
+- File mẫu: 10–30 giây, giọng sạch, không nhạc nền/tiếng ồn, nói tự nhiên.
+- Văn bản dài được tự chia theo câu rồi ghép lại; chỉnh `--pause`, `--speed`, `--temperature`.
+- Có GPU (CUDA) sẽ nhanh hơn nhiều; CPU vẫn chạy được nhưng chậm.
+- Chỉ clone giọng của chính bạn hoặc giọng bạn có quyền sử dụng.
