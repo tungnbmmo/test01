@@ -2,19 +2,24 @@ import {interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {COLORS, textGlow} from './theme';
 
 // Chữ động: từng ký tự bay lên + sáng dần (neon)
-export const AnimatedTitle: React.FC<{text: string; color?: string}> = ({text, color = COLORS.cyan}) => {
+export const AnimatedTitle: React.FC<{text: string; color?: string; top?: number; size?: number}> = ({
+  text,
+  color = COLORS.cyan,
+  top = 760,
+  size = 120,
+}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   return (
     <div
       style={{
         position: 'absolute',
-        top: 760,
+        top,
         width: '100%',
         textAlign: 'center',
         fontFamily: 'Segoe UI, Arial, sans-serif',
         fontWeight: 800,
-        fontSize: 120,
+        fontSize: size,
         letterSpacing: 8,
         color: COLORS.text,
         textShadow: textGlow(color),

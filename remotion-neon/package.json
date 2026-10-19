@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "remotion studio",
     "build": "remotion render NeonDemo out/neon-demo.mp4",
-    "still": "remotion still NeonDemo out/frame.png --frame=120"
+    "still": "remotion still NeonDemo out/frame.png --frame=120",
+    "build:signal": "remotion render SignalStory out/signal-story.mp4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.250",
