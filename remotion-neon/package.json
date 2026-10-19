@@ -1,0 +1,20 @@
+{
+  "name": "remotion-neon",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "build": "remotion render NeonDemo out/neon-demo.mp4",
+    "still": "remotion still NeonDemo out/frame.png --frame=120"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.250",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.250"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.3",
+    "typescript": "5.5.4"
+  }
+}
